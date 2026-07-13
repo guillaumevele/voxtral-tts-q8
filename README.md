@@ -1,16 +1,30 @@
 # voxtral-tts-q8 — Q8_0 quantization for Voxtral TTS
 
-Development repo for **Q8_0 (8-bit) quantization support** in [voxtral-mini-realtime-rs](https://github.com/TrevorS/voxtral-mini-realtime-rs), the pure-Rust runtime for Mistral's Voxtral ASR/TTS models. The work is being upstreamed: **[PR #15](https://github.com/TrevorS/voxtral-mini-realtime-rs/pull/15)** (open).
+This repository mirrors the branch behind open upstream
+[PR #15](https://github.com/TrevorS/voxtral-mini-realtime-rs/pull/15), which
+proposes **Q8_0 (8-bit) quantization support** for the Rust Voxtral runtime. The
+PR has not received maintainer review and this repository is not a release.
 
-Q8_0 sits between the existing Q4_0 path and BF16: near-lossless audio quality at roughly half the BF16 model size, small enough for 8 GB consumer GPUs.
+The patch contains WGSL compute shaders for fused Q8 dequantization and matrix
+multiplication, GGUF reader support for the Q8_0 dtype (34 bytes per 32-value
+block), tensor and loader plumbing, a `--quant-type q8_0` conversion option,
+unit tests modelled on the Q4 suite, and `q8_ops` micro-benchmarks.
 
-| Quantization | Model size (TTS) | Audio quality | Fits 8 GB VRAM |
-|---|---|---|---|
-| BF16 (reference) | ~8.8 GB | reference | no |
-| **Q8_0 (this work)** | **~4.5 GB** | near-lossless | **yes** |
-| Q4_0 (upstream) | ~2.7 GB | good, some artifacts | yes |
+## Verification status
 
-What the patch adds: WGSL compute shaders for fused Q8 dequant+matmul (tiled + naive), GGUF reader support for the Q8_0 dtype (34 bytes / 32-element block), tensor/loader plumbing, a `--quant-type q8_0` option in the quantization script, unit tests mirroring the Q4 suite, and `q8_ops` kernel micro-benchmarks. Validated on Vulkan (RTX 4070 Laptop, 8 GB) and Metal (Apple Silicon) — see the PR for test and benchmark details.
+- `cargo fmt --all -- --check` and Clippy with `-D warnings` pass locally.
+- The full test targets compile with the upstream feature set; the upstream
+  CPU/structure selection passes 63 tests.
+- Seven focused Q8 tests pass with `WGPU_BACKEND=metal` on an Apple M1 Pro,
+  including GPU dequantization, matmul at decoder-scale shapes, and the Q8-backed
+  linear layer. The GGUF Q8 reader test also passes. Commands and limits are in
+  [`docs/Q8_VALIDATION.md`](docs/Q8_VALIDATION.md).
+- No public reproducible listening-quality, peak-VRAM or end-to-end latency
+  receipt is included. Therefore this mirror does not claim near-lossless
+  quality or a specific GPU-memory requirement. The focused Metal kernel tests
+  do not establish full-model TTS behavior or Vulkan support.
+- The expected GGUF storage reduction follows from the Q8_0 block layout; it is
+  distinct from measured peak memory during inference.
 
 All base code is by [@TrevorS](https://github.com/TrevorS) and contributors — this repo only carries the Q8_0 track until it lands upstream. Original project README below.
 
@@ -127,12 +141,15 @@ cargo run --release --features "wgpu,cli,hub" --bin voxtral -- \
 cargo run --release --features "wgpu,cli,hub" --bin voxtral -- speak --list-voices
 ```
 
-#### Q8_0 (optional, near-lossless)
+#### Q8_0 (optional, experimental)
 
-Q8_0 sits between Q4 and BF16: ~4.5 GB on disk, audio quality much closer to BF16. There is no hosted Q8 GGUF — generate it locally from the BF16 weights:
+The Q8_0 block layout suggests an approximately 4.5 GB GGUF on disk. This
+validation does not include a generated full-model Q8 file or listening-quality
+evaluation. There is no hosted Q8 GGUF; generate one locally from the BF16
+weights to evaluate it in your own environment:
 
 ```bash
-# Quantize BF16 -> Q8_0 GGUF (~4.5 GB)
+# Quantize BF16 -> Q8_0 GGUF (approximately 4.5 GB from the block layout)
 uv run --with safetensors --with torch --with numpy scripts/quantize_tts_gguf.py \
   models/voxtral-tts/ -o models/voxtral-tts-q8.gguf --quant-type q8_0
 
