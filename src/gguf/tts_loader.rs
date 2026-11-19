@@ -720,7 +720,9 @@ impl<R: Read + Seek> Q4TtsModelLoader<R> {
             .tensor_data(embed_name)
             .context("Reading VQ embedding_sum bytes")?;
         let embed_f32: Vec<f32> = embed_bytes
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
             .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
             .collect();
 
@@ -729,7 +731,9 @@ impl<R: Read + Seek> Q4TtsModelLoader<R> {
             .tensor_data(usage_name)
             .context("Reading VQ cluster_usage bytes")?;
         let usage_f32: Vec<f32> = usage_bytes
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
             .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
             .collect();
 

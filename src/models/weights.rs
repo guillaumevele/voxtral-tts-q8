@@ -44,14 +44,18 @@ pub fn load_tensor<B: Backend, const D: usize>(
         safetensors::Dtype::F32 => {
             let bytes = tensor_view.data();
             bytes
-                .chunks_exact(4)
+                .as_chunks::<4>()
+                .0
+                .iter()
                 .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
                 .collect()
         }
         safetensors::Dtype::F16 => {
             let bytes = tensor_view.data();
             bytes
-                .chunks_exact(2)
+                .as_chunks::<2>()
+                .0
+                .iter()
                 .map(|b| {
                     let bits = u16::from_le_bytes([b[0], b[1]]);
                     half::f16::from_bits(bits).to_f32()
@@ -61,7 +65,9 @@ pub fn load_tensor<B: Backend, const D: usize>(
         safetensors::Dtype::BF16 => {
             let bytes = tensor_view.data();
             bytes
-                .chunks_exact(2)
+                .as_chunks::<2>()
+                .0
+                .iter()
                 .map(|b| {
                     let bits = u16::from_le_bytes([b[0], b[1]]);
                     half::bf16::from_bits(bits).to_f32()
@@ -143,18 +149,24 @@ pub fn load_tensor_raw<B: Backend, const D: usize>(
 
     let data: Vec<f32> = match dtype_str {
         "F32" => tensor_bytes
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
             .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
             .collect(),
         "F16" => tensor_bytes
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|b| {
                 let bits = u16::from_le_bytes([b[0], b[1]]);
                 half::f16::from_bits(bits).to_f32()
             })
             .collect(),
         "BF16" => tensor_bytes
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|b| {
                 let bits = u16::from_le_bytes([b[0], b[1]]);
                 half::bf16::from_bits(bits).to_f32()

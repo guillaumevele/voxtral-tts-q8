@@ -511,11 +511,15 @@ pub(crate) fn gguf_load_f32_tensor<R: Read + Seek, const D: usize>(
 
     let data: Vec<f32> = match info.dtype() {
         GgmlDtype::F32 => bytes
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
             .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
             .collect(),
         GgmlDtype::F16 => bytes
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|b| {
                 let bits = u16::from_le_bytes([b[0], b[1]]);
                 half::f16::from_bits(bits).to_f32()
