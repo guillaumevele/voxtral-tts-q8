@@ -51,8 +51,7 @@ impl ALiBi {
         let offset = kv_len - q_len;
 
         let mut bias_data = Vec::with_capacity(self.n_heads * q_len * kv_len);
-        for h in 0..self.n_heads {
-            let slope = self.slopes[h];
+        for &slope in self.slopes.iter().take(self.n_heads) {
             for i in 0..q_len {
                 let abs_i = (offset + i) as f32;
                 for j in 0..kv_len {

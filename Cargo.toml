@@ -152,3 +152,9 @@ lto = "thin"
 # creates workgroups of 128*8=1024 which exceeds the WebGPU limit.
 [patch.crates-io]
 cubecl-wgpu = { path = "patches/cubecl-wgpu-0.9.0" }
+
+[lints.clippy]
+# Clippy 1.100 reports this lint on the field declarations of every
+# `#[derive(Config)]` struct: the spans come from code the Burn derive macro
+# generates, so there is nothing to change at the reported locations.
+redundant_field_names = "allow"
